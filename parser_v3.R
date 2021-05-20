@@ -4,10 +4,6 @@ library(readxl)
 library(crayon)
 
 # === Read the list of region URL === #
-regions = read_xlsx("url_table.xlsx")
-setDT(regions)
-
-i = 1
 url = "http://cikrf.ru"
 page <- read_html(url)
 

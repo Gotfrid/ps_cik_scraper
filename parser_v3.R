@@ -33,7 +33,7 @@ region_addresses[, ps_url := paste(election_url,
                                    region_short,
                                    "?action=ik",
                                    sep = "/")]
-# hot fix for HMAO
+# hotfix for HMAO
 region_addresses[region_short == "hmao", 
                  ps_url := "http://www.khantu-mansy.vybory.izbirkom.ru/region/khantu-mansy/?action=ik"]
 
@@ -110,3 +110,69 @@ for (i in 606:nrow(all_tik)) {
     Sys.sleep(2)
 }
 
+all_uik <- rbindlist(datalist_uik, idcol = "unique_name")
+all_uik[, c("region_name", "tik") := tstrsplit(unique_name, "___")]
+all_uik[, unique_name := NULL]
+setnames(all_uik, "text", "uik")
+all_uik <-
+    merge(all_uik,
+          region_addresses[, .(region_name, ps_url)],
+          all.x = T,
+          by = "region_name")
+
+all_uik[, url := paste0(ps_url, "&vrn=", id)]
+all_uik[, ps_url := NULL]
+setcolorder(all_uik, c("region_name", "tik", "uik", "id", "url"))
+
+# remove empty TIKs
+all_uik <- all_uik[!is.na(id)]
+# saveRDS(all_uik, "all_uik.RDS") # save it in case anything happens
+
+# FINALLY, gather actual data
+for (i in 1:nrow(all_uik)) {
+    
+    reg = all_uik[i, region_name]
+    tik = all_uik[i, tik]
+    uik = all_uik[i, uik]
+    
+    cat(yellow(i), bgBlack(white(reg)), " --- ", tik, " --- ", uik,"\n")
+    
+    page <- read_html(all_uik$url[i], encoding = "CP1251")
+    
+    # all nodes
+    paragrapsh <- page %>% 
+        html_nodes("p") %>% 
+        html_text(trim = T)
+    
+    # address
+    address <- paragrapsh[like(paragrapsh, "Адрес комиссии:")]
+    
+    # phone
+    phone <- paragrapsh[like(paragrapsh, "Телефон:")]
+    
+    # email
+    email <- paragrapsh[like(paragrapsh, "Адрес электронной почты:")]
+    
+    # duty end
+    duty_end <- paragrapsh[like(paragrapsh, "Срок окончания полномочий:")]
+    
+    # map
+    coordinates <- page %>% 
+        html_node(".view_in_map") %>% 
+        html_attrs() %>% 
+        .[c("coordlat", "coordlon")]
+    
+    all_uik[i, `:=`(
+        uik_address = address,
+        uik_phone = phone,
+        uik_email = email,
+        uik_duty_end = duty_end,
+        uik_lon = coordinates['coordlon'],
+        uik_lat = coordinates['coordlat']
+    )]
+    
+    # time interval is an ethical MUST
+    Sys.sleep(1)
+}
+
+saveRDS(all_uik, "all_uik_full.RDS")

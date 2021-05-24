@@ -141,7 +141,7 @@ for (i in 1:nrow(all_uik)) {
     
     # all nodes
     paragrapsh <- page %>% 
-        html_nodes("p") %>% 
+        html_nodes(xpath = "//p") %>% 
         html_text(trim = T)
     
     # address
@@ -158,7 +158,7 @@ for (i in 1:nrow(all_uik)) {
     
     # map
     coordinates <- page %>% 
-        html_node(".view_in_map") %>% 
+        html_node(xpath = "//span[@class='view_in_map']") %>% 
         html_attrs() %>% 
         .[c("coordlat", "coordlon")]
     

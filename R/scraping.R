@@ -1,6 +1,5 @@
 library(rvest)
 library(data.table)
-library(stringr)
 library(crayon)
 library(glue)
 
@@ -50,12 +49,9 @@ region_addresses[region_short == "hmao",
 for (i in 1:nrow(region_addresses)) {
     print(region_addresses[i, region_name])
     page <- as.character(read_html(region_addresses$ps_url[i], encoding = "CP1251"))
-    tik_id <- stringr::str_extract(page, "\\d{13}")
-    region_num <- stringr::str_extract(page, "&region=.{7}") %>%
-        strsplit("\"") %>%
-        unlist() %>%
-        .[3] %>% # should be 3 elements always
-        as.character()
+    
+    tik_id <- gsub('.*(\\d{13}).*', '\\1', page)
+    region_num <- gsub('.*&region=\" \\+ \"(\\d{2}).*', '\\1', page)
 
     set(region_addresses, i, "vrn", tik_id)
     set(region_addresses, i, "reg_num", region_num)
